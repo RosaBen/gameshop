@@ -9,6 +9,31 @@
 </head>
 
 <body>
+  <header>
+    <div class="searchCard">
+      <div class="cardInner">
+        <label>Search for your favourite game</label>
+        <div class="container">
+          <div class="Icon">
+            <picture>
+              <source media="min-width:650px" srcset="./src/assets/images/search.svg">
+              <img src="./src/assets/images/search-mobile.svg" alt="search bar">
+            </picture>
+          </div>
+          <div class="InputContainer">
+            <input placeholder="Enter your text..." class="inputSearch" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="loadMore">
+      <button type="button" class="btnLoadMore">Load More Games</button>
+    </div>
+  </header>
+  <main>
+    <div class="games-container">
+    </div>
+  </main>
   <script src="./dist/bundle.js"></script>
 </body>
 

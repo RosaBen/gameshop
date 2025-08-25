@@ -5,7 +5,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack --config webpack.config.js --env NODE_ENV=production",
-    "dev": "webpack --config webpack.config.js --env NODE_ENV=development --watch"
+    "dev": "webpack --config webpack.config.js --env NODE_ENV=development --watch",
+    "watch": "webpack --config webpack.config.js --watch",
+    "start": "webpack serve --config webpack.config.js --open"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +23,7 @@
     "sass": "^1.90.0",
     "sass-loader": "^16.0.5",
     "webpack": "^5.101.3",
-    "webpack-cli": "^6.0.1"
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2"
   }
 }

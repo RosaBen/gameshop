@@ -66,8 +66,23 @@ module.exports = (env) => {
       new MiniCssExtractPlugin({
         filename: 'bundle.css',
       }),
-      new Dotenv(),
+      new Dotenv({
+        path: './.env', // Path to .env file (this is the default)
+        safe: false, // load .env.example (defaults to "false" which does not use dotenv-safe)
+        allowEmptyValues: true, // allow empty variables (e.g. `FOO=`) (defaults to false)
+        systemvars: true, // load all the predefined 'process.env' variables which will trump anything local per dotenv specs.
+        silent: false, // hide any errors
+        defaults: false // load '.env.defaults' file (defaults to "false" which does not use dotenv-defaults)
+      }),
     ],
+    devServer: {
+      static: {
+        directory: path.join(__dirname, "dist"),
+      },
+      compress: true,
+      port: 9000,
+      hot: true, // active HMR
+    },
 
     // Par défaut, le mode de Webpack est "production". En fonction de ce qui est
     // écrit ici, tu pourras appliquer différentes méthodes dans ton bundle final.
