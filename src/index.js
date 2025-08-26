@@ -779,6 +779,11 @@ function createScrollArrows() {
 
 // Gérer le scroll avec les flèches
 function setupScrollArrows() {
+  // Ne pas créer les flèches sur mobile
+  if (window.innerWidth <= 768) {
+    return;
+  }
+
   const { upArrow, downArrow } = createScrollArrows();
 
   function getCardRows() {
@@ -1047,6 +1052,16 @@ function setupResponsiveHandlers() {
           document.body.style.paddingTop = window.innerWidth <= 480 ? '55px' : '60px';
         } else {
           document.body.style.paddingTop = '0';
+        }
+      }
+
+      // Gérer l'affichage des scroll arrows selon la taille d'écran
+      const scrollArrows = document.querySelector('.scroll-arrows');
+      if (scrollArrows) {
+        if (window.innerWidth <= 768) {
+          scrollArrows.style.display = 'none';
+        } else {
+          scrollArrows.style.display = 'block';
         }
       }
     }, 250);
