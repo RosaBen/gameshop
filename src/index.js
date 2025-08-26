@@ -88,6 +88,11 @@ async function getDataInfos() {
 const array = await getDataInfos();
 games = array.slice(currentIndex, currentIndex + step);
 
+// Variables globales pour la recherche
+let allGames = array; // Garder une référence à tous les jeux
+let filteredGames = []; // Jeux filtrés par la recherche
+let isSearchActive = false; // État de la recherche
+
 // Intersection Observer pour l'animation des cartes
 function setupObserver() {
   const options = {
@@ -360,6 +365,135 @@ function addPlatformsAndGenres(container, platforms, genres) {
   container.appendChild(genresContainer);
 }
 
+// Fonction de recherche
+function searchGames(searchTerm) {
+  console.log('Searching for:', searchTerm);
+
+  if (!searchTerm || searchTerm.trim() === '') {
+    // Si la recherche est vide, revenir à l'affichage normal
+    isSearchActive = false;
+    clearGameContainer();
+    currentIndex = 0;
+    games = allGames.slice(currentIndex, currentIndex + step);
+    createCards(games);
+    showLoadMoreButton();
+    return;
+  }
+
+  isSearchActive = true;
+  const term = searchTerm.toLowerCase().trim();
+
+  // Filtrer les jeux par titre, genres, et plateformes
+  filteredGames = allGames.filter(game => {
+    // Recherche dans le titre
+    const titleMatch = game.title.toLowerCase().includes(term);
+
+    // Recherche dans les genres
+    const genreMatch = game.genres && game.genres.some(genre =>
+      genre.name && genre.name.toLowerCase().includes(term)
+    );
+
+    // Recherche dans les plateformes
+    const platformMatch = game.platforms && game.platforms.some(platform => {
+      const platformName = platform.platform ? platform.platform.name : platform.name;
+      return platformName && platformName.toLowerCase().includes(term);
+    });
+
+    return titleMatch || genreMatch || platformMatch;
+  });
+
+  console.log(`Found ${filteredGames.length} games matching "${searchTerm}"`);
+
+  // Afficher les résultats
+  clearGameContainer();
+  if (filteredGames.length > 0) {
+    createCards(filteredGames);
+    hideLoadMoreButton();
+  } else {
+    showNoResultsMessage(searchTerm);
+    hideLoadMoreButton();
+  }
+}
+
+// Vider le conteneur de jeux
+function clearGameContainer() {
+  const containerGames = document.querySelector('.games-container');
+  if (containerGames) {
+    containerGames.innerHTML = '';
+  }
+}
+
+// Afficher un message quand aucun résultat n'est trouvé
+function showNoResultsMessage(searchTerm) {
+  const containerGames = document.querySelector('.games-container');
+  if (containerGames) {
+    const noResultsDiv = document.createElement('div');
+    noResultsDiv.classList.add('no-results');
+    noResultsDiv.innerHTML = `
+      <h3>No games found for "${searchTerm}"</h3>
+      <p>Try searching with different keywords or check your spelling.</p>
+    `;
+    containerGames.appendChild(noResultsDiv);
+  }
+}
+
+// Cacher le bouton Load More
+function hideLoadMoreButton() {
+  const loadBtn = document.querySelector('.loadMore');
+  if (loadBtn) {
+    loadBtn.classList.add('hiddenLoad');
+  }
+}
+
+// Montrer le bouton Load More
+function showLoadMoreButton() {
+  const loadBtn = document.querySelector('.loadMore');
+  if (loadBtn) {
+    loadBtn.classList.remove('hiddenLoad');
+  }
+}
+
+// Configurer la barre de recherche
+function setupSearchBar() {
+  const searchInput = document.querySelector('.inputSearch');
+  if (!searchInput) {
+    console.error('Search input not found');
+    return;
+  }
+
+  let searchTimeout;
+
+  // Fonction de debounce pour éviter trop d'appels API
+  const debouncedSearch = (searchTerm) => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      searchGames(searchTerm);
+    }, 300); // Attendre 300ms après que l'utilisateur arrête de taper
+  };
+
+  // Événement sur la saisie
+  searchInput.addEventListener('input', (event) => {
+    const searchTerm = event.target.value;
+    debouncedSearch(searchTerm);
+  });
+
+  // Événement sur la touche Entrée
+  searchInput.addEventListener('keypress', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      clearTimeout(searchTimeout);
+      searchGames(event.target.value);
+    }
+  });
+
+  // Effacer la recherche quand on vide le champ
+  searchInput.addEventListener('blur', () => {
+    if (searchInput.value.trim() === '') {
+      searchGames('');
+    }
+  });
+}
+
 // create a single game card
 function createGameCard(game) {
   const { poster, title } = game;
@@ -543,13 +677,20 @@ function showMore() {
 
   btnLoadMore.addEventListener('click', (event) => {
     event.preventDefault();
+
+    // Ne pas charger plus de jeux si on est en mode recherche
+    if (isSearchActive) {
+      console.log('Search mode active, not loading more games');
+      return;
+    }
+
     currentIndex += step;
-    if (currentIndex >= array.length) {
+    if (currentIndex >= allGames.length) {
       btnLoadMore.disabled = true;
       btnLoadMore.textContent = 'Tous les jeux chargés';
       return;
     }
-    const newGames = array.slice(currentIndex, currentIndex + step);
+    const newGames = allGames.slice(currentIndex, currentIndex + step);
     games = [...games, ...newGames];
 
     createCards(newGames);
@@ -569,8 +710,19 @@ function readMore() {
       const gameTitle = gameCard.querySelector('h3').textContent;
       console.log('Game title found:', gameTitle);
 
-      // Trouver les données du jeu correspondant
-      const gameData = games.find(game => game.title === gameTitle);
+      // Trouver les données du jeu correspondant dans tous les jeux (pas seulement ceux affichés)
+      let gameData;
+      if (isSearchActive) {
+        gameData = filteredGames.find(game => game.title === gameTitle);
+      } else {
+        gameData = games.find(game => game.title === gameTitle);
+      }
+
+      // Si pas trouvé dans les jeux actuels, chercher dans tous les jeux
+      if (!gameData) {
+        gameData = allGames.find(game => game.title === gameTitle);
+      }
+
       console.log('Game data found:', gameData);
 
       if (gameData) {
@@ -596,14 +748,18 @@ function goBackToHomepage() {
   }
 
   // Réafficher les éléments de la page d'accueil
-  const loadBtn = document.querySelector('.loadMore');
   const gamesContainer = document.querySelector('.games-container');
-
-  if (loadBtn) {
-    loadBtn.classList.remove('hiddenLoad');
-  }
   if (gamesContainer) {
     gamesContainer.classList.remove('hiddenGames');
+  }
+
+  // Restaurer l'état approprié (recherche ou normal)
+  if (isSearchActive) {
+    // Si on était en mode recherche, garder les résultats de recherche
+    hideLoadMoreButton();
+  } else {
+    // Sinon, réafficher le bouton Load More
+    showLoadMoreButton();
   }
 }
 
@@ -614,6 +770,9 @@ function initApp() {
 
   // Create the homepage structure
   initializeHomepage();
+
+  // Setup search functionality
+  setupSearchBar();
 
   // Create the card page structure
   readMore();
