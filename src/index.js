@@ -79,8 +79,10 @@ async function getDataInfos() {
     const platforms = game.platforms;
     const genres = game.genres;
     const rating = game.rating;
+    const slug = game.slug; // Ajouter le slug
+    const tags = game.tags; // Ajouter les tags
     return {
-      releaseDate, poster, title, gameId, platforms, genres, rating, description
+      releaseDate, poster, title, gameId, platforms, genres, rating, description, slug, tags
     }
   });
 }
@@ -92,6 +94,134 @@ games = array.slice(currentIndex, currentIndex + step);
 let allGames = array; // Garder une référence à tous les jeux
 let filteredGames = []; // Jeux filtrés par la recherche
 let isSearchActive = false; // État de la recherche
+
+// Variables globales pour la navigation SPA
+const DOMAIN = window.location.origin; // Récupère automatiquement le domaine
+let currentRoute = null;
+
+// Fonctions de navigation SPA
+function navigateToGame(slug) {
+  const gameUrl = `${DOMAIN}/game/${slug}`;
+  window.history.pushState({ route: 'game', slug: slug }, '', gameUrl);
+  currentRoute = { type: 'game', slug: slug };
+
+  // Trouver et afficher le jeu
+  const game = allGames.find(g => g.slug === slug);
+  if (game) {
+    InitializeCardPage(game);
+  } else {
+    console.error('Game not found for slug:', slug);
+    // Essayer de récupérer le jeu via l'API
+    loadGameBySlug(slug);
+  }
+}
+
+function navigateToHome() {
+  window.history.pushState({ route: 'home' }, '', DOMAIN);
+  currentRoute = { type: 'home' };
+  goBackToHomepage();
+}
+
+// Fonction pour charger un jeu par slug via l'API si pas trouvé localement
+async function loadGameBySlug(slug) {
+  try {
+    const baseUrl = url.split('?')[0];
+    const apiKey = url.match(/key=([^&]*)/)?.[1];
+    const gameUrl = `${baseUrl}/${slug}?key=${apiKey}`;
+
+    console.log('Loading game by slug:', gameUrl);
+    const response = await fetch(gameUrl);
+
+    if (!response.ok) {
+      throw new Error(`Game not found: ${response.status}`);
+    }
+
+    const gameData = await response.json();
+    console.log('Game loaded by slug:', gameData);
+
+    // Convertir les données API au format de notre application
+    const game = {
+      releaseDate: gameData.released,
+      poster: gameData.background_image,
+      title: gameData.name,
+      gameId: gameData.id,
+      description: gameData.description,
+      platforms: gameData.platforms,
+      genres: gameData.genres,
+      rating: gameData.rating,
+      slug: gameData.slug,
+      tags: gameData.tags
+    };
+
+    await InitializeCardPage(game);
+  } catch (error) {
+    console.error('Error loading game by slug:', error);
+    // Rediriger vers la page d'accueil en cas d'erreur
+    navigateToHome();
+  }
+}
+
+// Gérer la navigation avec les boutons précédent/suivant du navigateur
+function handlePopState(event) {
+  if (event.state) {
+    currentRoute = event.state;
+    if (event.state.route === 'home') {
+      goBackToHomepage();
+    } else if (event.state.route === 'game' && event.state.slug) {
+      const game = allGames.find(g => g.slug === event.state.slug);
+      if (game) {
+        InitializeCardPage(game);
+      } else {
+        loadGameBySlug(event.state.slug);
+      }
+    }
+  } else {
+    // Pas d'état, probablement la page d'accueil
+    currentRoute = { type: 'home' };
+    goBackToHomepage();
+  }
+}
+
+// Parser l'URL actuelle pour déterminer la route
+function parseCurrentUrl() {
+  const path = window.location.pathname;
+  const gameMatch = path.match(/\/game\/(.+)$/);
+
+  if (gameMatch) {
+    const slug = gameMatch[1];
+    currentRoute = { type: 'game', slug: slug };
+    return { type: 'game', slug: slug };
+  } else {
+    currentRoute = { type: 'home' };
+    return { type: 'home' };
+  }
+}
+
+// Initialiser la navigation SPA
+function initializeSPA() {
+  // Écouter les changements d'URL
+  window.addEventListener('popstate', handlePopState);
+
+  // Parser l'URL actuelle au chargement
+  const route = parseCurrentUrl();
+
+  if (route.type === 'game') {
+    // Si on est sur une page de jeu, la charger
+    const game = allGames.find(g => g.slug === route.slug);
+    if (game) {
+      // Attendre que le DOM soit prêt avant d'afficher la page de jeu
+      setTimeout(() => {
+        InitializeCardPage(game);
+      }, 100);
+    } else {
+      // Essayer de charger via l'API
+      setTimeout(() => {
+        loadGameBySlug(route.slug);
+      }, 100);
+    }
+  }
+  // Si c'est la page d'accueil, ne rien faire (affichage par défaut)
+}
 
 // Intersection Observer pour l'animation des cartes
 function setupObserver() {
@@ -145,7 +275,7 @@ function initializeHomepage() {
 
 async function InitializeCardPage(game) {
   console.log('InitializeCardPage called with game:', game);
-  const { releaseDate, poster, title, platforms, genres, rating, gameId } = game;
+  const { releaseDate, poster, title, platforms, genres, rating, gameId, slug, tags } = game;
 
   // header
   // hide homepage loadmore button
@@ -174,7 +304,7 @@ async function InitializeCardPage(game) {
   backButton.classList.add('backButton');
   backButton.textContent = '← Back to Games';
   backButton.addEventListener('click', () => {
-    goBackToHomepage();
+    navigateToHome();
   });
 
   const divTitle = document.createElement('div');
@@ -281,9 +411,35 @@ async function InitializeCardPage(game) {
       genresContainer.appendChild(genresH4);
       genresContainer.appendChild(genresUl);
 
+      // tags
+      const tagsContainer = document.createElement('div');
+      const tagsH4 = document.createElement('h4');
+      const tagsUl = document.createElement('ul');
+      tagsContainer.classList.add('tagsGame');
+      tagsH4.textContent = 'Tags';
+
+      // Extraire les noms des tags (utiliser les tags détaillés ou ceux de base)
+      const detailedTags = gameDetails.tags || tags;
+      if (detailedTags && detailedTags.length > 0) {
+        // Limiter à 10 tags pour éviter l'encombrement
+        detailedTags.slice(0, 10).forEach(tagObj => {
+          const tagLi = document.createElement('li');
+          tagLi.textContent = tagObj.name || tagObj;
+          tagsUl.appendChild(tagLi);
+        });
+      } else {
+        const tagLi = document.createElement('li');
+        tagLi.textContent = 'No tags available';
+        tagsUl.appendChild(tagLi);
+      }
+
+      tagsContainer.appendChild(tagsH4);
+      tagsContainer.appendChild(tagsUl);
+
       divDescription.appendChild(divDescriptionPar);
       divDescription.appendChild(platformsContainer);
       divDescription.appendChild(genresContainer);
+      divDescription.appendChild(tagsContainer);
     } else {
       // Si on ne peut pas récupérer les détails, utiliser les données de base
       const descriptionPar = document.createElement('p');
@@ -291,7 +447,7 @@ async function InitializeCardPage(game) {
       divDescriptionPar.appendChild(descriptionPar);
 
       // Ajouter les plateformes et genres de base
-      addPlatformsAndGenres(divDescription, platforms, genres);
+      addPlatformsAndGenres(divDescription, platforms, genres, tags);
     }
   } catch (error) {
     console.error('Error loading game details:', error);
@@ -303,7 +459,7 @@ async function InitializeCardPage(game) {
     divDescriptionPar.appendChild(errorPar);
 
     // Ajouter les plateformes et genres de base
-    addPlatformsAndGenres(divDescription, platforms, genres);
+    addPlatformsAndGenres(divDescription, platforms, genres, tags);
   }
 
   section.appendChild(divDescription);
@@ -316,7 +472,7 @@ async function InitializeCardPage(game) {
 }
 
 // Fonction helper pour ajouter plateformes et genres
-function addPlatformsAndGenres(container, platforms, genres) {
+function addPlatformsAndGenres(container, platforms, genres, tags) {
   // platforms
   const platformsContainer = document.createElement('div');
   const platformsH4 = document.createElement('h4');
@@ -361,6 +517,32 @@ function addPlatformsAndGenres(container, platforms, genres) {
   genresContainer.appendChild(genresH4);
   genresContainer.appendChild(genresUl);
 
+  // tags
+  if (tags) {
+    const tagsContainer = document.createElement('div');
+    const tagsH4 = document.createElement('h4');
+    const tagsUl = document.createElement('ul');
+    tagsContainer.classList.add('tagsGame');
+    tagsH4.textContent = 'Tags';
+
+    if (tags && tags.length > 0) {
+      // Limiter à 10 tags
+      tags.slice(0, 10).forEach(tagObj => {
+        const tagLi = document.createElement('li');
+        tagLi.textContent = tagObj.name || tagObj;
+        tagsUl.appendChild(tagLi);
+      });
+    } else {
+      const tagLi = document.createElement('li');
+      tagLi.textContent = 'No tags available';
+      tagsUl.appendChild(tagLi);
+    }
+
+    tagsContainer.appendChild(tagsH4);
+    tagsContainer.appendChild(tagsUl);
+    container.appendChild(tagsContainer);
+  }
+
   container.appendChild(platformsContainer);
   container.appendChild(genresContainer);
 }
@@ -383,7 +565,7 @@ function searchGames(searchTerm) {
   isSearchActive = true;
   const term = searchTerm.toLowerCase().trim();
 
-  // Filtrer les jeux par titre, genres, et plateformes
+  // Filtrer les jeux par titre, genres, plateformes et tags
   filteredGames = allGames.filter(game => {
     // Recherche dans le titre
     const titleMatch = game.title.toLowerCase().includes(term);
@@ -399,7 +581,12 @@ function searchGames(searchTerm) {
       return platformName && platformName.toLowerCase().includes(term);
     });
 
-    return titleMatch || genreMatch || platformMatch;
+    // Recherche dans les tags
+    const tagMatch = game.tags && game.tags.some(tag =>
+      tag.name && tag.name.toLowerCase().includes(term)
+    );
+
+    return titleMatch || genreMatch || platformMatch || tagMatch;
   });
 
   console.log(`Found ${filteredGames.length} games matching "${searchTerm}"`);
@@ -700,7 +887,7 @@ function showMore() {
 // Read More information about game
 function readMore() {
   // Utiliser la délégation d'événements pour gérer les clics sur les boutons "Read More"
-  document.addEventListener('click', async (event) => {
+  document.addEventListener('click', (event) => {
     if (event.target.classList.contains('readMore')) {
       console.log('Read More button clicked!');
       event.preventDefault();
@@ -725,10 +912,11 @@ function readMore() {
 
       console.log('Game data found:', gameData);
 
-      if (gameData) {
-        await InitializeCardPage(gameData);
+      if (gameData && gameData.slug) {
+        // Utiliser la navigation SPA avec le slug
+        navigateToGame(gameData.slug);
       } else {
-        console.error('No game data found for title:', gameTitle);
+        console.error('No game data or slug found for title:', gameTitle);
       }
     }
   });
@@ -761,6 +949,9 @@ function goBackToHomepage() {
     // Sinon, réafficher le bouton Load More
     showLoadMoreButton();
   }
+
+  // Mettre à jour la route actuelle
+  currentRoute = { type: 'home' };
 }
 
 // Initialize the application
@@ -774,11 +965,16 @@ function initApp() {
   // Setup search functionality
   setupSearchBar();
 
+  // Initialize SPA navigation
+  initializeSPA();
+
   // Create the card page structure
   readMore();
 
-  // Create initial cards
-  createCards(games);
+  // Create initial cards (seulement si on est sur la page d'accueil)
+  if (!currentRoute || currentRoute.type === 'home') {
+    createCards(games);
+  }
 
   // Set up event listeners
   showMore();
