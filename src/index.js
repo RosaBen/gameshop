@@ -115,19 +115,37 @@ function initializeHomepage() {
 }
 
 function InitializeCardPage(game) {
+  console.log('InitializeCardPage called with game:', game);
   const { releaseDate, poster, title, platforms, genres, rating, description } = game;
 
   // header
   // hide homepage loadmore button
   const loadBtn = document.querySelector('.loadMore');
-  loadBtn.classList.add('hiddenLoad');
+  console.log('Load button found:', loadBtn);
+  if (loadBtn) {
+    loadBtn.classList.add('hiddenLoad');
+    console.log('Added hiddenLoad class to load button');
+  } else {
+    console.error('Load button not found!');
+  }
+
+  // Créer le bouton de retour
+  const backButton = document.createElement('button');
+  backButton.classList.add('backButton');
+  backButton.textContent = '← Back to Games';
+  backButton.addEventListener('click', () => {
+    goBackToHomepage();
+  });
+
   const divTitle = document.createElement('div');
   divTitle.classList.add('titlePage');
+  divTitle.appendChild(backButton);
+
   const h2Page = document.createElement('h2');
   h2Page.textContent = title;
   const ratingPar = document.createElement('p');
   const releasedPar = document.createElement('p');
-  ratingPar.textContent = rating;
+  ratingPar.textContent = `Rating: ${rating}`;
   releasedPar.textContent = `Released: ${releaseDate}`;
   divTitle.appendChild(h2Page);
   divTitle.appendChild(ratingPar);
@@ -136,7 +154,14 @@ function InitializeCardPage(game) {
   // main
   // hide games container
   const gamesContainer = document.querySelector('.games-container');
-  gamesContainer.classList.add('hiddenGames');
+  console.log('Games container found:', gamesContainer);
+  if (gamesContainer) {
+    gamesContainer.classList.add('hiddenGames');
+    console.log('Added hiddenGames class to games container');
+  } else {
+    console.error('Games container not found!');
+  }
+
   const section = document.createElement('section');
   section.classList.add('oneCardContainer');
   // image
@@ -153,7 +178,7 @@ function InitializeCardPage(game) {
   const divDescriptionPar = document.createElement('div');
   divDescriptionPar.classList.add('descriptionDiv');
   const descriptionPar = document.createElement('p');
-  descriptionPar.textContent = description;
+  descriptionPar.textContent = description || 'No description available';
   divDescriptionPar.appendChild(descriptionPar);
 
   // platforms
@@ -162,11 +187,19 @@ function InitializeCardPage(game) {
   const platformsUl = document.createElement('ul');
   platformsContainer.classList.add('platformsGame');
   platformsH4.textContent = 'Platforms';
-  platforms.forEach(platform => {
+
+  // Extraire les noms des plateformes
+  if (platforms && platforms.length > 0) {
+    platforms.forEach(platformObj => {
+      const platformLi = document.createElement('li');
+      platformLi.textContent = platformObj.platform ? platformObj.platform.name : platformObj.name || platformObj;
+      platformsUl.appendChild(platformLi);
+    });
+  } else {
     const platformLi = document.createElement('li');
-    platformLi.textContent = platform;
+    platformLi.textContent = 'No platforms available';
     platformsUl.appendChild(platformLi);
-  })
+  }
 
   platformsContainer.appendChild(platformsH4);
   platformsContainer.appendChild(platformsUl);
@@ -177,11 +210,19 @@ function InitializeCardPage(game) {
   const genresUl = document.createElement('ul');
   genresContainer.classList.add('genresGame');
   genresH4.textContent = 'Genres';
-  genres.forEach(genre => {
+
+  // Extraire les noms des genres
+  if (genres && genres.length > 0) {
+    genres.forEach(genreObj => {
+      const genreLi = document.createElement('li');
+      genreLi.textContent = genreObj.name || genreObj;
+      genresUl.appendChild(genreLi);
+    });
+  } else {
     const genreLi = document.createElement('li');
-    genreLi.textContent = genre;
+    genreLi.textContent = 'No genres available';
     genresUl.appendChild(genreLi);
-  })
+  }
 
   genresContainer.appendChild(genresH4);
   genresContainer.appendChild(genresUl);
@@ -190,12 +231,14 @@ function InitializeCardPage(game) {
   divDescription.appendChild(platformsContainer);
   divDescription.appendChild(genresContainer);
 
+  section.appendChild(divDescription);
+
   header.appendChild(divTitle);
   main.appendChild(section);
+
   return {
     divTitle, section
   }
-
 }
 
 // create a single game card
@@ -395,14 +438,54 @@ function showMore() {
 }
 
 // Read More information about game
-function readMore(game) {
-  const readMoreBtn = document.querySelectorAll('.readMore');
-  readMoreBtn.addEventListener('click', (event) => {
-    event.preventDefault();
+function readMore() {
+  // Utiliser la délégation d'événements pour gérer les clics sur les boutons "Read More"
+  document.addEventListener('click', (event) => {
+    if (event.target.classList.contains('readMore')) {
+      console.log('Read More button clicked!');
+      event.preventDefault();
 
+      // Trouver la carte parente pour obtenir le titre du jeu
+      const gameCard = event.target.closest('.game-card');
+      const gameTitle = gameCard.querySelector('h3').textContent;
+      console.log('Game title found:', gameTitle);
 
-  })
+      // Trouver les données du jeu correspondant
+      const gameData = games.find(game => game.title === gameTitle);
+      console.log('Game data found:', gameData);
 
+      if (gameData) {
+        InitializeCardPage(gameData);
+      } else {
+        console.error('No game data found for title:', gameTitle);
+      }
+    }
+  });
+}
+
+// Fonction pour revenir à la page d'accueil
+function goBackToHomepage() {
+  // Supprimer la page de détail
+  const titlePage = document.querySelector('.titlePage');
+  const detailSection = document.querySelector('.oneCardContainer');
+
+  if (titlePage) {
+    titlePage.remove();
+  }
+  if (detailSection) {
+    detailSection.remove();
+  }
+
+  // Réafficher les éléments de la page d'accueil
+  const loadBtn = document.querySelector('.loadMore');
+  const gamesContainer = document.querySelector('.games-container');
+
+  if (loadBtn) {
+    loadBtn.classList.remove('hiddenLoad');
+  }
+  if (gamesContainer) {
+    gamesContainer.classList.remove('hiddenGames');
+  }
 }
 
 // Initialize the application
@@ -414,7 +497,7 @@ function initApp() {
   initializeHomepage();
 
   // Create the card page structure
-  // InitializeCardPage(games)
+  readMore();
 
   // Create initial cards
   createCards(games);

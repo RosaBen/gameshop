@@ -78,7 +78,7 @@ main{
 // LOAD MORE BUTTON
 
 .hiddenLoad, .hiddenGames{
-  display: none;
+  display: none !important;
 }
 .loadMore {
   display: flex;
@@ -364,9 +364,99 @@ input {
 //  card Page
 
 header .titlePage{
-  display: none;
+  display: block;
+  text-align: center;
+  padding: 2rem;
+  
+  .backButton {
+    background: linear-gradient(145deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 25px;
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    margin-bottom: 1.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    &:active {
+      transform: translateY(0);
+    }
+  }
+  
+  h2 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: #333;
+  }
+  
+  p {
+    margin: 0.5rem 0;
+    font-size: 1.1rem;
+    color: #666;
+  }
 }
 
-section {
-  display: none;
+section.oneCardContainer {
+  display: block;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  
+  .containerImage {
+    text-align: center;
+    margin-bottom: 2rem;
+    
+    img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+  }
+  
+  .gameDescription {
+    .descriptionDiv {
+      margin-bottom: 2rem;
+      
+      p {
+        line-height: 1.6;
+        color: #333;
+        font-size: 1rem;
+      }
+    }
+    
+    .platformsGame, .genresGame {
+      margin-bottom: 1.5rem;
+      
+      h4 {
+        font-size: 1.2rem;
+        margin-bottom: 0.5rem;
+        color: #333;
+      }
+      
+      ul {
+        list-style: none;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        
+        li {
+          background: linear-gradient(145deg, #e6e6e6, #ffffff);
+          padding: 0.5rem 1rem;
+          border-radius: 20px;
+          box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+          color: #666;
+          font-size: 0.9rem;
+        }
+      }
+    }
+  }
 }
