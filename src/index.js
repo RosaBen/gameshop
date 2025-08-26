@@ -6,6 +6,7 @@ const step = 9;
 const url = process.env.API_URL;
 const header = document.querySelector('header');
 const main = document.querySelector('main');
+let observer;
 
 // gets all data results from api
 const getData = async (page = 1, pageSize = 40) => {
@@ -50,11 +51,12 @@ async function getDataInfos() {
     const poster = game.background_image;
     const title = game.name;
     const gameId = game.id;
+    const description = game.description;
     const platforms = game.platforms;
     const genres = game.genres;
     const rating = game.rating;
     return {
-      releaseDate, poster, title, gameId, platforms, genres, rating
+      releaseDate, poster, title, gameId, platforms, genres, rating, description
     }
   });
 }
@@ -63,8 +65,6 @@ const array = await getDataInfos();
 games = array.slice(currentIndex, currentIndex + step);
 
 // Intersection Observer pour l'animation des cartes
-let observer;
-
 function setupObserver() {
   const options = {
     root: null,
@@ -112,6 +112,90 @@ function initializeHomepage() {
   return {
     button, containerGames
   }
+}
+
+function InitializeCardPage(game) {
+  const { releaseDate, poster, title, platforms, genres, rating, description } = game;
+
+  // header
+  // hide homepage loadmore button
+  const loadBtn = document.querySelector('.loadMore');
+  loadBtn.classList.add('hiddenLoad');
+  const divTitle = document.createElement('div');
+  divTitle.classList.add('titlePage');
+  const h2Page = document.createElement('h2');
+  h2Page.textContent = title;
+  const ratingPar = document.createElement('p');
+  const releasedPar = document.createElement('p');
+  ratingPar.textContent = rating;
+  releasedPar.textContent = `Released: ${releaseDate}`;
+  divTitle.appendChild(h2Page);
+  divTitle.appendChild(ratingPar);
+  divTitle.appendChild(releasedPar);
+
+  // main
+  // hide games container
+  const gamesContainer = document.querySelector('.games-container');
+  gamesContainer.classList.add('hiddenGames');
+  const section = document.createElement('section');
+  section.classList.add('oneCardContainer');
+  // image
+  const divImage = document.createElement('div');
+  divImage.classList.add('containerImage');
+  const imagePage = document.createElement('img');
+  imagePage.src = poster;
+  imagePage.alt = title;
+  divImage.appendChild(imagePage);
+  section.appendChild(divImage);
+  // description
+  const divDescription = document.createElement('div');
+  divDescription.classList.add('gameDescription');
+  const divDescriptionPar = document.createElement('div');
+  divDescriptionPar.classList.add('descriptionDiv');
+  const descriptionPar = document.createElement('p');
+  descriptionPar.textContent = description;
+  divDescriptionPar.appendChild(descriptionPar);
+
+  // platforms
+  const platformsContainer = document.createElement('div');
+  const platformsH4 = document.createElement('h4');
+  const platformsUl = document.createElement('ul');
+  platformsContainer.classList.add('platformsGame');
+  platformsH4.textContent = 'Platforms';
+  platforms.forEach(platform => {
+    const platformLi = document.createElement('li');
+    platformLi.textContent = platform;
+    platformsUl.appendChild(platformLi);
+  })
+
+  platformsContainer.appendChild(platformsH4);
+  platformsContainer.appendChild(platformsUl);
+
+  // genres
+  const genresContainer = document.createElement('div');
+  const genresH4 = document.createElement('h4');
+  const genresUl = document.createElement('ul');
+  genresContainer.classList.add('genresGame');
+  genresH4.textContent = 'Genres';
+  genres.forEach(genre => {
+    const genreLi = document.createElement('li');
+    genreLi.textContent = genre;
+    genresUl.appendChild(genreLi);
+  })
+
+  genresContainer.appendChild(genresH4);
+  genresContainer.appendChild(genresUl);
+
+  divDescription.appendChild(divDescriptionPar);
+  divDescription.appendChild(platformsContainer);
+  divDescription.appendChild(genresContainer);
+
+  header.appendChild(divTitle);
+  main.appendChild(section);
+  return {
+    divTitle, section
+  }
+
 }
 
 // create a single game card
@@ -195,7 +279,7 @@ function createScrollArrows() {
   scrollContainer.appendChild(upArrow);
   scrollContainer.appendChild(downArrow);
   document.body.appendChild(scrollContainer);
-  
+
   console.log('Scroll arrows created and added to DOM');
   return { upArrow, downArrow };
 }
@@ -207,14 +291,14 @@ function setupScrollArrows() {
   function getCardRows() {
     const cards = Array.from(document.querySelectorAll('.game-card.visible'));
     if (cards.length === 0) return [];
-    
+
     const rows = [];
     const tolerance = 50; // Tolérance pour considérer des cartes sur la même ligne
 
     cards.forEach(card => {
       const rect = card.getBoundingClientRect();
       const cardTop = rect.top + window.pageYOffset;
-      
+
       // Cherche si cette carte appartient à une row existante
       let addedToExistingRow = false;
       for (let row of rows) {
@@ -223,7 +307,7 @@ function setupScrollArrows() {
           break;
         }
       }
-      
+
       // Si pas trouvé de row existante, crée une nouvelle row
       if (!addedToExistingRow) {
         rows.push(cardTop);
@@ -236,7 +320,7 @@ function setupScrollArrows() {
   upArrow.addEventListener('click', () => {
     console.log('Up arrow clicked');
     const currentScroll = window.pageYOffset;
-    
+
     if (currentScroll <= 100) {
       // Si on est déjà en haut, aller tout en haut
       window.scrollTo({
@@ -260,7 +344,7 @@ function setupScrollArrows() {
   downArrow.addEventListener('click', () => {
     console.log('Down arrow clicked');
     const currentScroll = window.pageYOffset;
-    
+
     // Version simplifiée : scroll par viewport
     const viewportHeight = window.innerHeight;
     const maxScroll = document.body.scrollHeight - window.innerHeight;
@@ -310,6 +394,17 @@ function showMore() {
   });
 }
 
+// Read More information about game
+function readMore(game) {
+  const readMoreBtn = document.querySelectorAll('.readMore');
+  readMoreBtn.addEventListener('click', (event) => {
+    event.preventDefault();
+
+
+  })
+
+}
+
 // Initialize the application
 function initApp() {
   // Setup the intersection observer
@@ -317,6 +412,9 @@ function initApp() {
 
   // Create the homepage structure
   initializeHomepage();
+
+  // Create the card page structure
+  // InitializeCardPage(games)
 
   // Create initial cards
   createCards(games);

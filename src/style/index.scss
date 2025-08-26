@@ -76,6 +76,10 @@ main{
 }
 
 // LOAD MORE BUTTON
+
+.hiddenLoad, .hiddenGames{
+  display: none;
+}
 .loadMore {
   display: flex;
   justify-content: center;
@@ -355,4 +359,14 @@ input {
     transform: scale(0.95);
     box-shadow: 0 2px 8px rgba(3, 233, 244, 0.4);
   }
+}
+
+//  card Page
+
+header .titlePage{
+  display: none;
+}
+
+section {
+  display: none;
 }
