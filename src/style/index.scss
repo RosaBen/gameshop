@@ -431,6 +431,23 @@ section.oneCardContainer {
         color: #333;
         font-size: 1rem;
       }
+      
+      .loading-text {
+        color: #667eea;
+        font-style: italic;
+        text-align: center;
+        padding: 1rem;
+      }
+      
+      .error-text {
+        color: #e74c3c;
+        font-style: italic;
+        text-align: center;
+        padding: 1rem;
+        background-color: #ffeaa7;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+      }
     }
     
     .platformsGame, .genresGame {

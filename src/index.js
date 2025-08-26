@@ -25,6 +25,30 @@ const getData = async (page = 1, pageSize = 40) => {
   }
 };
 
+// get detailed game information by ID
+const getGameDetails = async (gameId) => {
+  try {
+    // Construire l'URL pour récupérer les détails d'un jeu spécifique
+    const baseUrl = url.split('?')[0]; // Enlever les paramètres de l'URL de base
+    const apiKey = url.match(/key=([^&]*)/)?.[1]; // Extraire la clé API
+    const detailUrl = `${baseUrl}/${gameId}?key=${apiKey}`;
+
+    console.log('Fetching game details from:', detailUrl);
+    const response = await fetch(detailUrl);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const gameDetails = await response.json();
+    console.log('Game details received:', gameDetails);
+    return gameDetails;
+  } catch (error) {
+    console.error('Error fetching game details:', error);
+    return null;
+  }
+};
+
 // get specific infos from data
 async function getDataInfos() {
   let allGames = [];
@@ -51,7 +75,7 @@ async function getDataInfos() {
     const poster = game.background_image;
     const title = game.name;
     const gameId = game.id;
-    const description = game.description;
+    const description = game.reddit_description;
     const platforms = game.platforms;
     const genres = game.genres;
     const rating = game.rating;
@@ -114,9 +138,9 @@ function initializeHomepage() {
   }
 }
 
-function InitializeCardPage(game) {
+async function InitializeCardPage(game) {
   console.log('InitializeCardPage called with game:', game);
-  const { releaseDate, poster, title, platforms, genres, rating, description } = game;
+  const { releaseDate, poster, title, platforms, genres, rating, gameId } = game;
 
   // header
   // hide homepage loadmore button
@@ -127,6 +151,17 @@ function InitializeCardPage(game) {
     console.log('Added hiddenLoad class to load button');
   } else {
     console.error('Load button not found!');
+  }
+
+  // main
+  // hide games container
+  const gamesContainer = document.querySelector('.games-container');
+  console.log('Games container found:', gamesContainer);
+  if (gamesContainer) {
+    gamesContainer.classList.add('hiddenGames');
+    console.log('Added hiddenGames class to games container');
+  } else {
+    console.error('Games container not found!');
   }
 
   // Créer le bouton de retour
@@ -151,19 +186,9 @@ function InitializeCardPage(game) {
   divTitle.appendChild(ratingPar);
   divTitle.appendChild(releasedPar);
 
-  // main
-  // hide games container
-  const gamesContainer = document.querySelector('.games-container');
-  console.log('Games container found:', gamesContainer);
-  if (gamesContainer) {
-    gamesContainer.classList.add('hiddenGames');
-    console.log('Added hiddenGames class to games container');
-  } else {
-    console.error('Games container not found!');
-  }
-
   const section = document.createElement('section');
   section.classList.add('oneCardContainer');
+
   // image
   const divImage = document.createElement('div');
   divImage.classList.add('containerImage');
@@ -172,15 +197,121 @@ function InitializeCardPage(game) {
   imagePage.alt = title;
   divImage.appendChild(imagePage);
   section.appendChild(divImage);
-  // description
+
+  // description container
   const divDescription = document.createElement('div');
   divDescription.classList.add('gameDescription');
   const divDescriptionPar = document.createElement('div');
   divDescriptionPar.classList.add('descriptionDiv');
-  const descriptionPar = document.createElement('p');
-  descriptionPar.textContent = description || 'No description available';
-  divDescriptionPar.appendChild(descriptionPar);
 
+  // Ajouter un loader pendant le chargement des détails
+  const loadingText = document.createElement('p');
+  loadingText.textContent = 'Loading detailed description...';
+  loadingText.classList.add('loading-text');
+  divDescriptionPar.appendChild(loadingText);
+
+  // Récupérer les détails du jeu
+  try {
+    console.log('Fetching details for game ID:', gameId);
+    const gameDetails = await getGameDetails(gameId);
+
+    // Supprimer le texte de chargement
+    loadingText.remove();
+
+    if (gameDetails) {
+      // Utiliser la description détaillée si disponible
+      const description = gameDetails.description_raw || gameDetails.description || game.description || 'No description available';
+
+      const descriptionPar = document.createElement('p');
+      descriptionPar.innerHTML = description; // Utiliser innerHTML pour supporter le HTML
+      divDescriptionPar.appendChild(descriptionPar);
+
+      // Mettre à jour les plateformes et genres avec les données détaillées si disponibles
+      const detailedPlatforms = gameDetails.platforms || platforms;
+      const detailedGenres = gameDetails.genres || genres;
+
+      // platforms
+      const platformsContainer = document.createElement('div');
+      const platformsH4 = document.createElement('h4');
+      const platformsUl = document.createElement('ul');
+      platformsContainer.classList.add('platformsGame');
+      platformsH4.textContent = 'Platforms';
+
+      // Extraire les noms des plateformes
+      if (detailedPlatforms && detailedPlatforms.length > 0) {
+        detailedPlatforms.forEach(platformObj => {
+          const platformLi = document.createElement('li');
+          platformLi.textContent = platformObj.platform ? platformObj.platform.name : platformObj.name || platformObj;
+          platformsUl.appendChild(platformLi);
+        });
+      } else {
+        const platformLi = document.createElement('li');
+        platformLi.textContent = 'No platforms available';
+        platformsUl.appendChild(platformLi);
+      }
+
+      platformsContainer.appendChild(platformsH4);
+      platformsContainer.appendChild(platformsUl);
+
+      // genres
+      const genresContainer = document.createElement('div');
+      const genresH4 = document.createElement('h4');
+      const genresUl = document.createElement('ul');
+      genresContainer.classList.add('genresGame');
+      genresH4.textContent = 'Genres';
+
+      // Extraire les noms des genres
+      if (detailedGenres && detailedGenres.length > 0) {
+        detailedGenres.forEach(genreObj => {
+          const genreLi = document.createElement('li');
+          genreLi.textContent = genreObj.name || genreObj;
+          genresUl.appendChild(genreLi);
+        });
+      } else {
+        const genreLi = document.createElement('li');
+        genreLi.textContent = 'No genres available';
+        genresUl.appendChild(genreLi);
+      }
+
+      genresContainer.appendChild(genresH4);
+      genresContainer.appendChild(genresUl);
+
+      divDescription.appendChild(divDescriptionPar);
+      divDescription.appendChild(platformsContainer);
+      divDescription.appendChild(genresContainer);
+    } else {
+      // Si on ne peut pas récupérer les détails, utiliser les données de base
+      const descriptionPar = document.createElement('p');
+      descriptionPar.textContent = game.description || 'No description available';
+      divDescriptionPar.appendChild(descriptionPar);
+
+      // Ajouter les plateformes et genres de base
+      addPlatformsAndGenres(divDescription, platforms, genres);
+    }
+  } catch (error) {
+    console.error('Error loading game details:', error);
+    // En cas d'erreur, supprimer le loader et afficher un message d'erreur
+    loadingText.remove();
+    const errorPar = document.createElement('p');
+    errorPar.textContent = 'Error loading detailed description. Using basic information.';
+    errorPar.classList.add('error-text');
+    divDescriptionPar.appendChild(errorPar);
+
+    // Ajouter les plateformes et genres de base
+    addPlatformsAndGenres(divDescription, platforms, genres);
+  }
+
+  section.appendChild(divDescription);
+  header.appendChild(divTitle);
+  main.appendChild(section);
+
+  return {
+    divTitle, section
+  }
+}
+
+// Fonction helper pour ajouter plateformes et genres
+function addPlatformsAndGenres(container, platforms, genres) {
   // platforms
   const platformsContainer = document.createElement('div');
   const platformsH4 = document.createElement('h4');
@@ -188,7 +319,6 @@ function InitializeCardPage(game) {
   platformsContainer.classList.add('platformsGame');
   platformsH4.textContent = 'Platforms';
 
-  // Extraire les noms des plateformes
   if (platforms && platforms.length > 0) {
     platforms.forEach(platformObj => {
       const platformLi = document.createElement('li');
@@ -211,7 +341,6 @@ function InitializeCardPage(game) {
   genresContainer.classList.add('genresGame');
   genresH4.textContent = 'Genres';
 
-  // Extraire les noms des genres
   if (genres && genres.length > 0) {
     genres.forEach(genreObj => {
       const genreLi = document.createElement('li');
@@ -227,18 +356,8 @@ function InitializeCardPage(game) {
   genresContainer.appendChild(genresH4);
   genresContainer.appendChild(genresUl);
 
-  divDescription.appendChild(divDescriptionPar);
-  divDescription.appendChild(platformsContainer);
-  divDescription.appendChild(genresContainer);
-
-  section.appendChild(divDescription);
-
-  header.appendChild(divTitle);
-  main.appendChild(section);
-
-  return {
-    divTitle, section
-  }
+  container.appendChild(platformsContainer);
+  container.appendChild(genresContainer);
 }
 
 // create a single game card
@@ -440,7 +559,7 @@ function showMore() {
 // Read More information about game
 function readMore() {
   // Utiliser la délégation d'événements pour gérer les clics sur les boutons "Read More"
-  document.addEventListener('click', (event) => {
+  document.addEventListener('click', async (event) => {
     if (event.target.classList.contains('readMore')) {
       console.log('Read More button clicked!');
       event.preventDefault();
@@ -455,7 +574,7 @@ function readMore() {
       console.log('Game data found:', gameData);
 
       if (gameData) {
-        InitializeCardPage(gameData);
+        await InitializeCardPage(gameData);
       } else {
         console.error('No game data found for title:', gameTitle);
       }
