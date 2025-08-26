@@ -75,7 +75,7 @@ async function getDataInfos() {
     const poster = game.background_image;
     const title = game.name;
     const gameId = game.id;
-    const description = game.reddit_description;
+    const description = game.description;
     const platforms = game.platforms;
     const genres = game.genres;
     const rating = game.rating;
