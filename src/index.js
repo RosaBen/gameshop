@@ -8,10 +8,33 @@ const header = document.querySelector('header');
 const main = document.querySelector('main');
 let observer;
 
+// Variables pour les filtres
+let currentFilters = {
+  platforms: '',
+  genres: '',
+  dates: ''
+};
+
 // gets all data results from api
-const getData = async (page = 1, pageSize = 40) => {
+const getData = async (page = 1, pageSize = 40, filters = null) => {
   try {
-    const response = await fetch(`${url}&page_size=${pageSize}&page=${page}`);
+    let apiUrl = `${url}&page_size=${pageSize}&page=${page}`;
+
+    // Ajouter les filtres à l'URL si ils existent
+    if (filters) {
+      if (filters.platforms) {
+        apiUrl += `&platforms=${filters.platforms}`;
+      }
+      if (filters.genres) {
+        apiUrl += `&genres=${filters.genres}`;
+      }
+      if (filters.dates) {
+        apiUrl += `&dates=${filters.dates}`;
+      }
+    }
+
+    console.log('Fetching with URL:', apiUrl);
+    const response = await fetch(apiUrl);
     const data = await response.json();
     return {
       results: data.results,
@@ -50,14 +73,14 @@ const getGameDetails = async (gameId) => {
 };
 
 // get specific infos from data
-async function getDataInfos() {
+async function getDataInfos(filters = null) {
   let allGames = [];
   let currentPage = 1;
   const gamesPerPage = 40;
   const totalPagesToFetch = 5;
 
   for (let page = 1; page <= totalPagesToFetch; page++) {
-    const data = await getData(page, gamesPerPage);
+    const data = await getData(page, gamesPerPage, filters);
 
     if (data.results.length === 0) {
       break;
@@ -263,14 +286,202 @@ function initializeHomepage() {
   divBtnLoad.appendChild(button);
   header.appendChild(divBtnLoad);
 
+  // Créer le système de filtres
+  const filtersContainer = createFiltersContainer();
+  header.appendChild(filtersContainer);
+
   // main container
   const containerGames = document.createElement('div');
   containerGames.classList.add('games-container');
   main.appendChild(containerGames);
 
   return {
-    button, containerGames
+    button, containerGames, filtersContainer
   }
+}
+
+// Créer le conteneur des filtres
+function createFiltersContainer() {
+  const filtersDiv = document.createElement('div');
+  filtersDiv.classList.add('filters-container');
+
+  // Bouton pour afficher/masquer les filtres
+  const toggleBtn = document.createElement('button');
+  toggleBtn.type = 'button';
+  toggleBtn.classList.add('filters-toggle');
+  toggleBtn.textContent = 'Filtres';
+  toggleBtn.innerHTML = '<span>🎮</span> Filtres';
+
+  // Conteneur des filtres (initialement masqué)
+  const filtersContent = document.createElement('div');
+  filtersContent.classList.add('filters-content');
+
+  // Créer les sélecteurs de filtres
+  const platformsSelect = createFilterSelect('platforms', 'Plateformes', [
+    { value: '', text: 'Toutes les plateformes' },
+    { value: '4', text: 'PC' },
+    { value: '18', text: 'PlayStation 4' },
+    { value: '1', text: 'Xbox One' },
+    { value: '7', text: 'Nintendo Switch' },
+    { value: '3', text: 'iOS' },
+    { value: '21', text: 'Android' }
+  ]);
+
+  const genresSelect = createFilterSelect('genres', 'Genres', [
+    { value: '', text: 'Tous les genres' },
+    { value: '4', text: 'Action' },
+    { value: '51', text: 'Indie' },
+    { value: '3', text: 'Adventure' },
+    { value: '5', text: 'RPG' },
+    { value: '10', text: 'Strategy' },
+    { value: '2', text: 'Shooter' },
+    { value: '40', text: 'Casual' },
+    { value: '14', text: 'Simulation' },
+    { value: '7', text: 'Puzzle' },
+    { value: '11', text: 'Arcade' },
+    { value: '83', text: 'Platformer' },
+    { value: '1', text: 'Racing' },
+    { value: '15', text: 'Sports' },
+    { value: '6', text: 'Fighting' },
+    { value: '19', text: 'Family' },
+    { value: '28', text: 'Board Games' },
+    { value: '34', text: 'Educational' },
+    { value: '17', text: 'Card' }
+  ]);
+
+  const datesSelect = createFilterSelect('dates', 'Années', [
+    { value: '', text: 'Toutes les années' },
+    { value: '2024-01-01,2024-12-31', text: '2024' },
+    { value: '2023-01-01,2023-12-31', text: '2023' },
+    { value: '2022-01-01,2022-12-31', text: '2022' },
+    { value: '2021-01-01,2021-12-31', text: '2021' },
+    { value: '2020-01-01,2020-12-31', text: '2020' },
+    { value: '2019-01-01,2019-12-31', text: '2019' },
+    { value: '2018-01-01,2018-12-31', text: '2018' },
+    { value: '2017-01-01,2017-12-31', text: '2017' },
+    { value: '2016-01-01,2016-12-31', text: '2016' },
+    { value: '2015-01-01,2015-12-31', text: '2015' }
+  ]);
+
+  // Bouton reset
+  const resetBtn = document.createElement('button');
+  resetBtn.type = 'button';
+  resetBtn.classList.add('filters-reset');
+  resetBtn.textContent = 'Reset';
+
+  // Assembler les filtres
+  filtersContent.appendChild(platformsSelect);
+  filtersContent.appendChild(genresSelect);
+  filtersContent.appendChild(datesSelect);
+  filtersContent.appendChild(resetBtn);
+
+  filtersDiv.appendChild(toggleBtn);
+  filtersDiv.appendChild(filtersContent);
+
+  // Event listeners
+  setupFiltersEventListeners(toggleBtn, filtersContent, resetBtn);
+
+  return filtersDiv;
+}
+
+// Créer un sélecteur de filtre
+function createFilterSelect(name, label, options) {
+  const selectDiv = document.createElement('div');
+  selectDiv.classList.add('filter-select');
+
+  const labelEl = document.createElement('label');
+  labelEl.textContent = label;
+  labelEl.setAttribute('for', `filter-${name}`);
+
+  const select = document.createElement('select');
+  select.id = `filter-${name}`;
+  select.name = name;
+
+  options.forEach(option => {
+    const optionEl = document.createElement('option');
+    optionEl.value = option.value;
+    optionEl.textContent = option.text;
+    select.appendChild(optionEl);
+  });
+
+  selectDiv.appendChild(labelEl);
+  selectDiv.appendChild(select);
+
+  return selectDiv;
+}
+
+// Configurer les event listeners des filtres
+function setupFiltersEventListeners(toggleBtn, filtersContent, resetBtn) {
+  // Toggle filtres
+  toggleBtn.addEventListener('click', () => {
+    filtersContent.classList.toggle('open');
+    toggleBtn.classList.toggle('active');
+  });
+
+  // Event listeners pour les sélecteurs
+  const selects = filtersContent.querySelectorAll('select');
+  selects.forEach(select => {
+    select.addEventListener('change', handleFilterChange);
+  });
+
+  // Reset filtres
+  resetBtn.addEventListener('click', resetFilters);
+}
+
+// Gérer les changements de filtres
+function handleFilterChange() {
+  const platformsSelect = document.getElementById('filter-platforms');
+  const genresSelect = document.getElementById('filter-genres');
+  const datesSelect = document.getElementById('filter-dates');
+
+  currentFilters = {
+    platforms: platformsSelect.value,
+    genres: genresSelect.value,
+    dates: datesSelect.value
+  };
+
+  console.log('Filtres appliqués:', currentFilters);
+
+  // Relancer la recherche avec les filtres
+  applyFilters();
+}
+
+// Appliquer les filtres
+async function applyFilters() {
+  try {
+    // Réinitialiser l'index
+    currentIndex = 0;
+
+    // Vider le conteneur
+    const gamesContainer = document.querySelector('.games-container');
+    gamesContainer.innerHTML = '';
+
+    // Récupérer les données avec filtres
+    const hasFilters = currentFilters.platforms || currentFilters.genres || currentFilters.dates;
+    games = await getDataInfos(hasFilters ? currentFilters : null);
+
+    // Afficher les premiers jeux
+    await displayGames();
+  } catch (error) {
+    console.error('Erreur lors de l\'application des filtres:', error);
+  }
+}
+
+// Reset des filtres
+function resetFilters() {
+  currentFilters = {
+    platforms: '',
+    genres: '',
+    dates: ''
+  };
+
+  // Reset des sélecteurs
+  document.getElementById('filter-platforms').value = '';
+  document.getElementById('filter-genres').value = '';
+  document.getElementById('filter-dates').value = '';
+
+  // Réappliquer sans filtres
+  applyFilters();
 }
 
 async function InitializeCardPage(game) {
@@ -286,6 +497,12 @@ async function InitializeCardPage(game) {
     console.log('Added hiddenLoad class to load button');
   } else {
     console.error('Load button not found!');
+  }
+
+  // hide filters container
+  const filtersContainer = document.querySelector('.filters-container');
+  if (filtersContainer) {
+    filtersContainer.style.display = 'none';
   }
 
   // main
@@ -877,7 +1094,7 @@ function showMore() {
     return;
   }
 
-  btnLoadMore.addEventListener('click', (event) => {
+  btnLoadMore.addEventListener('click', async (event) => {
     event.preventDefault();
 
     // Ne pas charger plus de jeux si on est en mode recherche
@@ -886,16 +1103,45 @@ function showMore() {
       return;
     }
 
-    currentIndex += step;
-    if (currentIndex >= allGames.length) {
+    // Vérifier s'il faut charger plus de données depuis l'API (avec filtres si nécessaire)
+    if (currentIndex + step >= games.length) {
+      // Charger plus de données depuis l'API
+      btnLoadMore.classList.add('loading');
+      btnLoadMore.textContent = 'Chargement depuis l\'API...';
+      btnLoadMore.disabled = true;
+
+      try {
+        // Déterminer si on utilise les filtres
+        const hasFilters = currentFilters.platforms || currentFilters.genres || currentFilters.dates;
+        const newData = await getDataInfos(hasFilters ? currentFilters : null);
+
+        // Si on a de nouvelles données, les ajouter
+        if (newData && newData.length > games.length) {
+          games = newData;
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement de nouvelles données:', error);
+        btnLoadMore.classList.remove('loading');
+        btnLoadMore.textContent = 'Erreur de chargement';
+        setTimeout(() => {
+          btnLoadMore.textContent = 'Load More Games';
+          btnLoadMore.disabled = false;
+        }, 2000);
+        return;
+      }
+    }
+
+    // Vérifier s'il reste des jeux à afficher
+    if (currentIndex >= games.length) {
       btnLoadMore.disabled = true;
       btnLoadMore.textContent = 'Tous les jeux chargés';
       btnLoadMore.style.opacity = '0.6';
       return;
     }
 
-    const newGames = allGames.slice(currentIndex, currentIndex + step);
-    games = [...games, ...newGames];
+    currentIndex += step;
+    const endIndex = Math.min(currentIndex + step, games.length);
+    const newGames = games.slice(currentIndex, endIndex);
 
     // Ajouter feedback visuel pendant le chargement
     btnLoadMore.classList.add('loading');
@@ -988,6 +1234,12 @@ function goBackToHomepage() {
   const gamesContainer = document.querySelector('.games-container');
   if (gamesContainer) {
     gamesContainer.classList.remove('hiddenGames');
+  }
+
+  // Réafficher les filtres
+  const filtersContainer = document.querySelector('.filters-container');
+  if (filtersContainer) {
+    filtersContainer.style.display = 'block';
   }
 
   // Restaurer l'état approprié (recherche ou normal)
