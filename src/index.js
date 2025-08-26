@@ -629,6 +629,11 @@ function hideLoadMoreButton() {
   const loadBtn = document.querySelector('.loadMore');
   if (loadBtn) {
     loadBtn.classList.add('hiddenLoad');
+
+    // En mode mobile, retirer le padding-top du body
+    if (window.innerWidth <= 768) {
+      document.body.style.paddingTop = '0';
+    }
   }
 }
 
@@ -637,6 +642,11 @@ function showLoadMoreButton() {
   const loadBtn = document.querySelector('.loadMore');
   if (loadBtn) {
     loadBtn.classList.remove('hiddenLoad');
+
+    // En mode mobile, remettre le padding-top du body
+    if (window.innerWidth <= 768) {
+      document.body.style.paddingTop = window.innerWidth <= 480 ? '55px' : '60px';
+    }
   }
 }
 
@@ -875,12 +885,46 @@ function showMore() {
     if (currentIndex >= allGames.length) {
       btnLoadMore.disabled = true;
       btnLoadMore.textContent = 'Tous les jeux chargés';
+      btnLoadMore.style.opacity = '0.6';
       return;
     }
+
     const newGames = allGames.slice(currentIndex, currentIndex + step);
     games = [...games, ...newGames];
 
+    // Ajouter feedback visuel pendant le chargement
+    btnLoadMore.classList.add('loading');
+    btnLoadMore.textContent = 'Chargement...';
+    btnLoadMore.disabled = true;
+
+    // Créer les nouvelles cartes
     createCards(newGames);
+
+    // Remettre le bouton normal après un court délai
+    setTimeout(() => {
+      btnLoadMore.classList.remove('loading');
+      btnLoadMore.textContent = 'Load More Games';
+      btnLoadMore.disabled = false;
+
+      // En mode mobile, scroll automatiquement vers les nouvelles cartes
+      if (window.innerWidth <= 768) {
+        const gamesContainer = document.querySelector('.games-container');
+        const lastCards = gamesContainer.querySelectorAll('.game-card');
+        if (lastCards.length > 0) {
+          // Scroll vers la première nouvelle carte
+          const targetCard = lastCards[lastCards.length - newGames.length];
+          if (targetCard) {
+            setTimeout(() => {
+              targetCard.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start',
+                inline: 'nearest'
+              });
+            }, 300);
+          }
+        }
+      }
+    }, 800);
   });
 }
 
@@ -983,6 +1027,30 @@ function initApp() {
   setTimeout(() => {
     setupScrollArrows();
   }, 100);
+
+  // Setup responsive handlers
+  setupResponsiveHandlers();
+}
+
+// Setup responsive event handlers
+function setupResponsiveHandlers() {
+  let resizeTimeout;
+
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      const loadBtn = document.querySelector('.loadMore');
+
+      if (loadBtn && !loadBtn.classList.contains('hiddenLoad')) {
+        // Ajuster le padding du body selon la taille d'écran
+        if (window.innerWidth <= 768) {
+          document.body.style.paddingTop = window.innerWidth <= 480 ? '55px' : '60px';
+        } else {
+          document.body.style.paddingTop = '0';
+        }
+      }
+    }, 250);
+  });
 }
 
 // Start the application
